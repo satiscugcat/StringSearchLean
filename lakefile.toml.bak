@@ -1,0 +1,10 @@
+name = "StringSearchLean"
+version = "0.1.0"
+defaultTargets = ["stringsearchlean"]
+
+[[lean_lib]]
+name = "StringSearchLean"
+
+[[lean_exe]]
+name = "stringsearchlean"
+root = "Main"
