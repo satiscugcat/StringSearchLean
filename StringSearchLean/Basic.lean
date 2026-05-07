@@ -4,6 +4,9 @@ import CaseStudies.TestingUtil
 set_option loom.semantics.termination "total"
 set_option loom.semantics.choice "demonic"
 
+def String.toNatArray (s : String) : Array Nat :=
+  s.toAsciiByteArray.data.map UInt8.toNat
+
 structure FlaggedNat where
   flag: Bool
   val: Nat
@@ -33,21 +36,22 @@ abbrev KMPValid_Array (W: Array Nat) (T: Array FlaggedNat) : Prop :=
   W.size = T.size ∧ 
   ∀ i < T.size, KMPValid_FlaggedNat W i T[i]!
 
-
+@[grind]
 def flagged_to_nat_for_decreasing (o: FlaggedNat) :=
   if o.flag then 0 else o.val + 1
 
 -- Definitions
 method kmp_table (W: Array Nat) return (T: Array FlaggedNat)
+  require W.size ≥ 1
   ensures (KMPValid_Array W T)
-  
+
   do
     let mut result := Array.replicate W.size {flag := Bool.false, val := 0}
     let mut pos := 1
     let mut cnd := 0
     while pos < W.size 
 
-      invariant 1 ≤ pos ∧ pos < W.size
+      invariant 1 ≤ pos ∧ pos ≤ W.size
       invariant  W[pos]! = W[cnd]! -> KMPValid_FlaggedNat W pos result[cnd]!
       invariant  W[pos]! ≠ W[cnd]! -> KMPValid_Nat W pos cnd
       invariant ∀ i < pos, KMPValid_FlaggedNat W i result[i]!
@@ -72,52 +76,48 @@ method kmp_table (W: Array Nat) return (T: Array FlaggedNat)
     return result
 
 
--- method kmp_search (W: Array Nat) (S: Array Nat) return (position: Option Nat)
---   ensures (match position with | none => ¬∃ val, Matches W 0 S val W.size | some val => Matches W 0 S val W.size)
---   do
---     let mut j := 0
---     let mut k := 0
---     let T ← kmp_table W
---     let mut result := Option.none
---     while j < S.size
---       invariant 0 ≤ j ∧ j < T.size
---       invariant 0 ≤ k ∧ k < W.size
---       decreasing (S.size - j)
---       -- Above line is incorrect, ideally I would like to say
---       -- "decreasing (S.size - j, k)", since the natural lean4
---       -- ordering is the lexicographic one, but that seems to
---       -- cause a weird type issue.
---       do
---       if W[k]! = S[j]! then
---         j := j + 1
---         k := k + 1
---         if k = W.size then 
---           result := Option.some (j - k)
---           break
---       else
---         match T[k]! with
---         | none => 
---           k := 0
---           j := j + 1
---         | some val =>
---           k := val
---     return result
-
-
-def String.toNatArray (s : String) : Array Nat :=
-  s.toAsciiByteArray.data.map UInt8.toNat
-
--- /--
---   info: DivM.res #[none, some 0, some 0, some 0, none, some 0, some 2]
--- -/
--- #guard_msgs in
 #eval (kmp_table "ABCDABD".toNatArray).run
+
+
+method kmp_search (W: Array Nat) (S: Array Nat) return (position: Option Nat)
+  ensures (match position with | none => ¬∃ val, Matches W 0 S val W.size | some val => Matches W 0 S val W.size)
+  do
+    let mut j := 0
+    let mut k := 0
+    let T ← kmp_table W
+    let mut result := Option.none
+    while j < S.size
+      invariant 0 ≤ j ∧ j < T.size
+      invariant 0 ≤ k ∧ k < W.size
+      decreasing (S.size - j)
+      -- Above line is incorrect, ideally I would like to say
+      -- "decreasing (S.size - j, k)", since the natural lean4
+      -- ordering is the lexicographic one, but that seems to
+      -- cause a weird type issue.
+      do
+      if W[k]! = S[j]! then
+        j := j + 1
+        k := k + 1
+        if k = W.size then 
+          result := Option.some (j - k)
+          break
+      else
+        if T[k]!.flag then 
+          k := T[k]!.val 
+        else 
+          k:=0
+          j := j + 1
+    return result
+
+
+
+
 
 -- /--
 --   info: DivM.res (some 15)
 -- -/
 -- #guard_msgs in
--- #eval (kmp_search "ABCDABD".toNatArray "ABC ABCDAB ABCDABCDABDE".toNatArray).run
+#eval (kmp_search "ABCDABD".toNatArray "ABC ABCDAB ABCDABCDABDE".toNatArray).run
 
 
 prove_correct kmp_table by
