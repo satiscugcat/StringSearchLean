@@ -6,17 +6,17 @@ set_option loom.semantics.choice "demonic"
 
 def String.toNatArray (s : String) : Array Nat :=
   s.toAsciiByteArray.data.map UInt8.toNat
-
+@[grind]
 structure FlaggedNat where
   flag: Bool
   val: Nat
 deriving Inhabited, Repr
-
-abbrev Matches (A: Array Nat) (a: Nat) (B: Array Nat) (b: Nat) (n: Nat)
+@[grind]
+def Matches (A: Array Nat) (a: Nat) (B: Array Nat) (b: Nat) (n: Nat)
   :=
-    n + a < A.size ∧ n + b < B.size ∧ ∀ i < n, A[a + i]! = B[b + i]!
-
-abbrev Prefix (W: Array Nat) (P: Array Nat) 
+    n + a ≤ A.size ∧ n + b ≤ B.size ∧ ∀ i < n, A[a + i]! = B[b + i]!
+@[grind]
+def Prefix (W: Array Nat) (P: Array Nat) 
   := Matches W 0 P 0 P.size
 
 /--
@@ -24,15 +24,20 @@ abbrev Prefix (W: Array Nat) (P: Array Nat)
   the suffix of length t_i of the subarray [0..i-1]<both numbers inclusive> is a prefix, 
   and such that improper suffix of length t_i+1 of the subarray [0..i] is not a prefix.
 -/
-abbrev KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:= 
-  Prefix W (W.extract (i - t_i) i) ∧ ¬ Prefix W (W.extract (i - t_i) (i+1))
-  ∧ ∀ j > t_i, ¬ (Prefix W (W.extract (i - j) i) ∧ ¬ Prefix W (W.extract (i - j) (i+1)))
+@[grind]
+def KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:= 
+  Prefix W (W.extract (i - t_i) i) ∧ 
+  ¬ Prefix W (W.extract (i - t_i) (i+1))
+  ∧ ∀ j > t_i, 
+    ¬ (Prefix W (W.extract (i - j) i) ∧ ¬ Prefix W (W.extract (i - j) (i+1)))
 
-abbrev KMPValid_FlaggedNat (W: Array Nat) (i: Nat) (t_i: FlaggedNat) : Prop:= 
-  if t_i.flag then KMPValid_Nat W i t_i.val else ∃ k, KMPValid_Nat W i k
 
+@[grind]
+def KMPValid_FlaggedNat (W: Array Nat) (i: Nat) (t_i: FlaggedNat) : Prop:= 
+  if t_i.flag then KMPValid_Nat W i t_i.val else ¬ ∃ k, KMPValid_Nat W i k
 
-abbrev KMPValid_Array (W: Array Nat) (T: Array FlaggedNat) : Prop :=
+@[grind]
+def KMPValid_Array (W: Array Nat) (T: Array FlaggedNat) : Prop :=
   W.size = T.size ∧ 
   ∀ i < T.size, KMPValid_FlaggedNat W i T[i]!
 
@@ -119,17 +124,27 @@ method kmp_search (W: Array Nat) (S: Array Nat) return (position: Option Nat)
 -- #guard_msgs in
 #eval (kmp_search "ABCDABD".toNatArray "ABC ABCDAB ABCDABCDABDE".toNatArray).run
 
-
-prove_correct kmp_table by
-  loom_solve
-  sorry
-  
-
--- prove_correct kmp_search by
---   loom_solve
-
--- #print kmp_search
--- verifying that if-then-else parsing is done appropriately
--- #print kmp_table 
+lemma helper_1 {α: Type} [Inhabited α] {n: Nat} (a: α) (size: n ≥ 1): (Array.replicate n a)[0]! = a :=
+  by
+    grind
 
 
+@[loomSpec]
+  lemma kmp_table_correct (W : Array Nat) :
+      triple (with_name_prefix`require W.size ≥ 1) (kmp_table W)
+        (fun T => with_name_prefix`ensures(KMPValid_Array W T)) :=
+    by
+    unfold kmp_table
+    (loom_solve)
+    { intros negh
+      simp [KMPValid_Nat]
+      constructor
+      { rw [Array.extract_empty_of_stop_le_start (by grind)]
+        simp [Prefix]
+        unfold Matches
+        
+        sorry }
+      sorry }
+    { sorry }
+    { sorry }
+    
