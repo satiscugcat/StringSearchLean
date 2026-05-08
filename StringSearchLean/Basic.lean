@@ -25,8 +25,8 @@ def Matches (A: Array Nat) (a: Nat) (B: Array Nat) (b: Nat) (n: Nat)
 -/
 @[grind]
 def KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:= 
-  t_i < i ∧ Matches W (i - t_i) W 0 t_i 
-  ∧ (∀ j, t_i < j ∧ j < i -> ¬ (Matches W (i - j) W 0 j ))
+  t_i < i ∧ Matches W (i - t_i) W 0 t_i ∧ ¬ Matches W (i - t_i) W 0 (t_i + 1) 
+  ∧ (∀ j, t_i < j ∧ j < i -> ¬ (Matches W (i - j) W 0 j ∧ ¬ Matches W (i - j) W 0 (j + 1)))
 
 #print KMPValid_Nat
 @[grind]
@@ -54,10 +54,9 @@ method kmp_table (W: Array Nat) return (T: Array FlaggedNat)
     while pos < W.size 
 
       invariant 1 ≤ pos ∧ pos ≤ W.size
-      invariant  W[pos]! = W[cnd]! -> KMPValid_FlaggedNat W pos result[cnd]!
-      invariant  W[pos]! ≠ W[cnd]! -> KMPValid_Nat W pos cnd
+      -- invariant  pos < W.size -> W[pos]! = W[cnd]! -> KMPValid_FlaggedNat W pos result[cnd]!
+      -- invariant  pos < W.size -> W[pos]! ≠ W[cnd]! -> KMPValid_Nat W pos cnd
       invariant ∀ i < pos, KMPValid_FlaggedNat W i result[i]!
-      invariant KMPValid_Array W (result.extract 0 pos)
       invariant cnd < pos
       
       done_with pos = W.size
@@ -149,6 +148,8 @@ method matches_test (A: Array Nat) (B: Array Nat) return (b: Bool)
 
 prove_correct matches_test by
   loom_solve
+
+
 
 
 @[loomSpec]
