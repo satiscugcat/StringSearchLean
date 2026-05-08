@@ -15,9 +15,8 @@ deriving Inhabited, Repr
 def Matches (A: Array Nat) (a: Nat) (B: Array Nat) (b: Nat) (n: Nat)
   :=
     n + a ≤ A.size ∧ n + b ≤ B.size ∧ ∀ i < n, A[a + i]! = B[b + i]!
-@[grind]
-def Prefix (W: Array Nat) (P: Array Nat) 
-  := Matches W 0 P 0 P.size
+
+
 
 /--
   For a given index, we say t_i is a KMPValid_Nat if it is the largest number such that
@@ -26,12 +25,10 @@ def Prefix (W: Array Nat) (P: Array Nat)
 -/
 @[grind]
 def KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:= 
-  Prefix W (W.extract (i - t_i) i) ∧ 
-  ¬ Prefix W (W.extract (i - t_i) (i+1))
-  ∧ ∀ j > t_i, 
-    ¬ (Prefix W (W.extract (i - j) i) ∧ ¬ Prefix W (W.extract (i - j) (i+1)))
+  t_i < i ∧ Matches W (i - t_i) W 0 t_i 
+  ∧ (∀ j, t_i < j ∧ j < i -> ¬ (Matches W (i - j) W 0 j ))
 
-
+#print KMPValid_Nat
 @[grind]
 def KMPValid_FlaggedNat (W: Array Nat) (i: Nat) (t_i: FlaggedNat) : Prop:= 
   if t_i.flag then KMPValid_Nat W i t_i.val else ¬ ∃ k, KMPValid_Nat W i k
@@ -127,6 +124,31 @@ method kmp_search (W: Array Nat) (S: Array Nat) return (position: Option Nat)
 lemma helper_1 {α: Type} [Inhabited α] {n: Nat} (a: α) (size: n ≥ 1): (Array.replicate n a)[0]! = a :=
   by
     grind
+
+
+
+method matches_test (A: Array Nat) (B: Array Nat) return (b: Bool)
+  ensures b <-> (Matches A 0 B 0 A.size ∧ A.size = B.size)
+  do
+    let mut result := Bool.true
+    if A.size ≠ B.size then 
+      result := Bool.false
+    else
+      let mut i := 0
+      while (i < A.size)
+        invariant 0 ≤ i ∧ i ≤ A.size
+        invariant result <-> Matches A 0 B 0 i
+        decreasing (A.size - i)
+        do
+          if A[i]! ≠ B[i]! then 
+            result := Bool.false
+            i := i + 1
+          else
+            i := i + 1
+    return result
+
+prove_correct matches_test by
+  loom_solve
 
 
 @[loomSpec]
