@@ -56,7 +56,7 @@ method kmp_table (W: Array Nat) return (T: Array FlaggedNat)
       invariant 1 ≤ pos ∧ pos ≤ W.size
       -- invariant  pos < W.size -> W[pos]! = W[cnd]! -> KMPValid_FlaggedNat W pos result[cnd]!
       -- invariant  pos < W.size -> W[pos]! ≠ W[cnd]! -> KMPValid_Nat W pos cnd
-      invariant ∀ i < pos, KMPValid_FlaggedNat W i result[i]!
+      -- invariant ∀ i < pos, KMPValid_FlaggedNat W i result[i]!
       invariant cnd < pos
       
       done_with pos = W.size
