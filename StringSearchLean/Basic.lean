@@ -24,9 +24,10 @@ def Matches (A: Array Nat) (a: Nat) (B: Array Nat) (b: Nat) (n: Nat)
   and such that improper suffix of length t_i+1 of the subarray [0..i] is not a prefix.
 -/
 @[grind]
-def KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:= 
+def KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:=
+
   t_i < i ∧ Matches W (i - t_i) W 0 t_i 
-  -- ∧ ¬ Matches W (i - t_i) W 0 (t_i + 1) 
+  -- ∧ ¬ Matches W (i - t_i) W 0 (t_i + 1)
   ∧ (∀ j, t_i < j ∧ j < i -> ¬ (Matches W (i - j) W 0 j 
     -- ∧ ¬ Matches W (i - j) W 0 (j + 1)
     ))
@@ -100,7 +101,7 @@ method kmp_search (W: Array Nat) (S: Array Nat) return (position: Option Nat)
       invariant 0 ≤ j ∧ j ≤ T.size
       invariant 0 ≤ k ∧ k ≤ W.size
       decreasing decreasing_helper (S.size - j) W.size k 
-      -- Above line is incorrect, ideally I would like to say
+      -- Above line is awkward, ideally I would like to say
       -- "decreasing (S.size - j, k)", since the natural lean4
       -- ordering is the lexicographic one, but that seems to
       -- cause a weird type issue.
