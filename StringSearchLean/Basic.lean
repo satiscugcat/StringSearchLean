@@ -25,8 +25,11 @@ def Matches (A: Array Nat) (a: Nat) (B: Array Nat) (b: Nat) (n: Nat)
 -/
 @[grind]
 def KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:= 
-  t_i < i ∧ Matches W (i - t_i) W 0 t_i ∧ ¬ Matches W (i - t_i) W 0 (t_i + 1) 
-  ∧ (∀ j, t_i < j ∧ j < i -> ¬ (Matches W (i - j) W 0 j ∧ ¬ Matches W (i - j) W 0 (j + 1)))
+  t_i < i ∧ Matches W (i - t_i) W 0 t_i 
+  -- ∧ ¬ Matches W (i - t_i) W 0 (t_i + 1) 
+  ∧ (∀ j, t_i < j ∧ j < i -> ¬ (Matches W (i - j) W 0 j 
+    -- ∧ ¬ Matches W (i - j) W 0 (j + 1)
+    ))
 
 #print KMPValid_Nat
 @[grind]
@@ -56,7 +59,7 @@ method kmp_table (W: Array Nat) return (T: Array FlaggedNat)
       invariant 1 ≤ pos ∧ pos ≤ W.size
       -- invariant  pos < W.size -> W[pos]! = W[cnd]! -> KMPValid_FlaggedNat W pos result[cnd]!
       -- invariant  pos < W.size -> W[pos]! ≠ W[cnd]! -> KMPValid_Nat W pos cnd
-      -- invariant ∀ i < pos, KMPValid_FlaggedNat W i result[i]!
+      invariant ∀ i < pos, KMPValid_FlaggedNat W i result[i]!
       invariant cnd < pos
       
       done_with pos = W.size
@@ -72,14 +75,20 @@ method kmp_table (W: Array Nat) return (T: Array FlaggedNat)
         decreasing (flagged_to_nat_for_decreasing cnd')
           do
             cnd' := result[cnd'.val]!
-      if !cnd'.flag then cnd := 0 else  cnd := cnd'.val + 1
-      pos := pos + 1
+      if !cnd'.flag then 
+        cnd := 0
+        pos := pos + 1
+      else  
+        cnd := cnd'.val + 1
+        pos := pos + 1
     return result
 
 
 #eval (kmp_table "ABCDABD".toNatArray).run
 
-
+@[grind]
+def decreasing_helper (a b c: Nat): Nat :=
+  a * 10^b + c
 method kmp_search (W: Array Nat) (S: Array Nat) return (position: Option Nat)
   ensures (match position with | none => ¬∃ val, Matches W 0 S val W.size | some val => Matches W 0 S val W.size)
   do
@@ -88,9 +97,9 @@ method kmp_search (W: Array Nat) (S: Array Nat) return (position: Option Nat)
     let T ← kmp_table W
     let mut result := Option.none
     while j < S.size
-      invariant 0 ≤ j ∧ j < T.size
-      invariant 0 ≤ k ∧ k < W.size
-      decreasing (S.size - j)
+      invariant 0 ≤ j ∧ j ≤ T.size
+      invariant 0 ≤ k ∧ k ≤ W.size
+      decreasing decreasing_helper (S.size - j) W.size k 
       -- Above line is incorrect, ideally I would like to say
       -- "decreasing (S.size - j, k)", since the natural lean4
       -- ordering is the lexicographic one, but that seems to
