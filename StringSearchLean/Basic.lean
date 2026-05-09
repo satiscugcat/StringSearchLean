@@ -60,7 +60,8 @@ method kmp_table (W: Array Nat) return (T: Array FlaggedNat)
       invariant 1 ≤ pos ∧ pos ≤ W.size
       -- invariant  pos < W.size -> W[pos]! = W[cnd]! -> KMPValid_FlaggedNat W pos result[cnd]!
       -- invariant  pos < W.size -> W[pos]! ≠ W[cnd]! -> KMPValid_Nat W pos cnd
-      invariant ∀ i < pos, KMPValid_FlaggedNat W i result[i]!
+      -- invariant ∀ i < (pos - 1), KMPValid_FlaggedNat W i result[i]!
+      invariant KMPValid_Array W (result.extract 0 pos)
       invariant cnd < pos
       
       done_with pos = W.size
@@ -169,15 +170,6 @@ prove_correct matches_test by
     by
     unfold kmp_table
     (loom_solve)
-    { intros negh
-      simp [KMPValid_Nat]
-      constructor
-      { rw [Array.extract_empty_of_stop_le_start (by grind)]
-        simp [Prefix]
-        unfold Matches
-        
-        sorry }
-      sorry }
-    { sorry }
-    { sorry }
+
+    all_goals (sorry)
     
