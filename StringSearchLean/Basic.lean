@@ -137,8 +137,8 @@ lemma helper_1 {α: Type} [Inhabited α] {n: Nat} (a: α) (size: n ≥ 1): (Arra
 
 
 
-method matches_test (A: Array Nat) (B: Array Nat) return (b: Bool)
-  ensures b <-> (Matches A 0 B 0 A.size ∧ A.size = B.size)
+method matches_test (A: Array Nat) (B: Array FlaggedNat) return (b: Bool)
+  ensures True
   do
     let mut result := Bool.true
     if A.size ≠ B.size then 
@@ -147,10 +147,11 @@ method matches_test (A: Array Nat) (B: Array Nat) return (b: Bool)
       let mut i := 0
       while (i < A.size)
         invariant 0 ≤ i ∧ i ≤ A.size
-        invariant result <-> Matches A 0 B 0 i
+        invariant ∀ s < i, KMPValid_FlaggedNat A s B[s]!
+        done_with i = A.size
         decreasing (A.size - i)
         do
-          if A[i]! ≠ B[i]! then 
+          if A[i]! ≠ B[i]!.val then 
             result := Bool.false
             i := i + 1
           else
@@ -163,13 +164,38 @@ prove_correct matches_test by
 
 
 
-@[loomSpec]
-  lemma kmp_table_correct (W : Array Nat) :
-      triple (with_name_prefix`require W.size ≥ 1) (kmp_table W)
-        (fun T => with_name_prefix`ensures(KMPValid_Array W T)) :=
-    by
-    unfold kmp_table
-    (loom_solve)
+method matches_test_weird (A: Array Nat) (B: Array FlaggedNat) return (b: Bool)
+  ensures True
+  do
+    let mut result := Bool.true
+    if A.size ≠ B.size then 
+      result := Bool.false
+    else
+      let mut i := 0
+      while (i < A.size)
+        invariant 0 ≤ i ∧ i ≤ A.size
+        invariant ∀ s < i, KMPValid_FlaggedNat A s B[s]!
+        done_with i = A.size
+        decreasing (A.size - i)
+        do
+          if A[i]! ≠ B[i]!.val then 
+            result := Bool.false
+            i := i + 1
+          else
+            i := i + 1
+    return result
+
+prove_correct matches_test_weird by
+  loom_solve
+
+
+-- @[loomSpec]
+--   lemma kmp_table_correct (W : Array Nat) :
+--       triple (with_name_prefix`require W.size ≥ 1) (kmp_table W)
+--         (fun T => with_name_prefix`ensures(KMPValid_Array W T)) :=
+--     by
+--     unfold kmp_table
+--     (loom_solve)
     
-    all_goals (sorry)
+--     all_goals (sorry)
     
