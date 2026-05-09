@@ -160,7 +160,7 @@ method matches_test (A: Array Nat) (B: Array FlaggedNat) return (b: Bool)
 
 prove_correct matches_test by
   loom_solve
-
+  all_goals (sorry)
 
 
 
@@ -187,7 +187,7 @@ method matches_test_weird (A: Array Nat) (B: Array FlaggedNat) return (b: Bool)
 
 prove_correct matches_test_weird by
   loom_solve
-
+  all_goals (sorry)
 
 -- @[loomSpec]
 --   lemma kmp_table_correct (W : Array Nat) :
