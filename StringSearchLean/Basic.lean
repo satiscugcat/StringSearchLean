@@ -33,7 +33,7 @@ def KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:=
     ∧ ¬ Matches W (i - j) W 0 (j + 1)
     ))
 
-#print KMPValid_Nat
+
 @[grind]
 def KMPValid_FlaggedNat (W: Array Nat) (i: Nat) (t_i: FlaggedNat) : Prop:= 
   if t_i.flag then KMPValid_Nat W i t_i.val else ¬ ∃ k, KMPValid_Nat W i k
@@ -77,6 +77,7 @@ method kmp_table (W: Array Nat) return (T: Array FlaggedNat)
 
         invariant cnd'.flag → cnd'.val < pos
         invariant cnd'.flag → Matches W (pos - cnd'.val) W 0 cnd'.val
+        invariant ∀ j, (if cnd'.flag then cnd'.val + 1 else 0) < j → j < pos + 1 → ¬Matches W (pos + 1 - j) W 0 j
 
         decreasing (flagged_to_nat_for_decreasing cnd')
           do
@@ -230,13 +231,10 @@ lemma Matches_symm (A B: Array Nat) (a b n: Nat) : Matches A a B b n <-> Matches
   :=
     by
       constructor <;> simp [Matches] <;> intros h <;> aesop
-@[loomSpec]
-  lemma kmp_table_correct (W : Array Nat) :
-      triple (with_name_prefix`require W.size ≥ 1) (kmp_table W)
-        (fun T => with_name_prefix`ensures(KMPValid_Array W T)) :=
-    by
-    unfold kmp_table
-    (loom_solve)
+
+
+prove_correct kmp_table by
+    loom_solve
     { intros i ih
       have : i = pos ∨ i < pos := by omega
       apply Or.elim this
@@ -335,6 +333,62 @@ lemma Matches_symm (A B: Array Nat) (a b n: Nat) : Matches A a B b n <-> Matches
       rw [<- invariant_3, <- invariant_8]
       congr 1
       omega }
+    { simp at if_pos_1
+      specialize invariant_7 if_pos_1.1; specialize invariant_8 if_pos_1.1
+      rw [if_pos_1.1] at invariant_9; simp at invariant_9
+      rw [array_set!_unchanged _ _ _ _ (by omega) (by omega) (by omega)]
+      intros j jgt jlt
+      have : cnd'.val + 1 < j ∨ j = cnd'.val + 1 ∨ j < cnd'.val + 1 := by omega
+      rcases this with jH | jH | jH
+      · apply invariant_9 <;> assumption
+      · intros jmatch; apply if_pos_1.2
+        simp [Matches] at jmatch
+        rw [jH] at jmatch
+        rw [<- jmatch.2.2 cnd'.val (by omega)]
+        congr 1; omega
+      · clear jlt; revert jH; intro jlt        
+        specialize invariant_3 cnd'.val invariant_7
+        simp [KMPValid_FlaggedNat] at invariant_3
+        have h_nb : Matches W (cnd'.val - (j - 1)) W 0 (j - 1) ->
+              Matches W (cnd'.val - (j - 1)) W 0 j := 
+             by
+               revert invariant_3 jgt
+               rcases result[cnd'.val]!.flag <;> simp <;> intros jgt invariant_3 match_h
+               · have := no_match_nonext_of_no_KMPValid W cnd'.val (by simp; exact invariant_3) (j-1) (by omega)
+                 simp at this
+                 have this2 : j - 1 + 1 = j := by omega
+                 rw [this2] at this
+                 apply this; assumption
+               · simp [KMPValid_Nat] at invariant_3
+                 have := invariant_3.2.2.2 (j - 1) (by omega) (by omega) match_h
+                 have this2: j - 1 + 1 = j := by omega
+                 rw [this2] at this; assumption
+        intros hmatch; apply if_pos_1.2
+        
+        have eq1: W[pos]! = W[j-1]! :=
+          by
+            simp [Matches] at hmatch
+            rw[<- hmatch.2.2 (j - 1) (by omega)]
+            congr 1; omega
+        have eq2: W[cnd'.val]! = W[j-1]! :=
+          by
+            have lower_match : Matches W (cnd'.val - (j - 1)) W 0 (j - 1) :=
+              by
+                simp [Matches]; simp[Matches] at invariant_8; simp[Matches] at hmatch
+                constructor; omega
+                constructor; omega
+                intros i iH
+                have this1 := invariant_8.2.2 (cnd'.val - (j - 1) + i) (by omega)
+                have this2 := hmatch.2.2 i (by omega)
+                rw [<- this2]
+                rw [<- this1]
+                congr 1; omega
+            specialize h_nb lower_match
+            simp [Matches] at h_nb
+            rw [<- h_nb.2.2 (j-1) (by omega)]
+            congr 1; omega
+        rw [eq1, eq2]
+    }
     { simp at if_pos_1; specialize invariant_7 if_pos_1.1; specialize invariant_8 if_pos_1.1
       rw [array_set!_unchanged _ _ _ _ (by omega) (by omega) (by omega)]
       specialize invariant_3 cnd'.val invariant_7
@@ -348,7 +402,15 @@ lemma Matches_symm (A B: Array Nat) (a b n: Nat) : Matches A a B b n <-> Matches
       · simp; intros invariant_3 
         simp [KMPValid_Nat] at invariant_3
         exact invariant_3.1 }
-    { clear invariant_7 invariant_8 done_2 cnd' if_pos_1
+    { simp
+      intros j jgt jlt 
+      specialize invariant_6 (j - 1) (by omega) (by omega)
+      intro negh
+      apply invariant_6
+      have : pos - (j - 1) = pos + 1 - j := by omega
+      rw [this]
+      apply Matches_truncate' _ _ _ _ _ _ negh (by omega) }
+    { clear invariant_7 invariant_8 invariant_9 done_2 cnd' if_pos_1
       intros i ilt
       have : i = pos ∨ i < pos := by omega
       apply (Or.elim this) <;> clear ilt this <;> intro ih
@@ -366,9 +428,8 @@ lemma Matches_symm (A B: Array Nat) (a b n: Nat) : Matches A a B b n <-> Matches
           specialize invariant_6 j jgt jlt; contradiction
       · rw [array_set!_unchanged _ _ _ _ (by omega) (by omega) (by omega)]
         apply invariant_3; exact ih }
-    { sorry }
     { omega }
-    { clear invariant_7 invariant_8 done_2 cnd' if_neg_1
+    { clear invariant_7 invariant_8 invariant_9 done_2 cnd' if_neg_1
       intros i ilt
       have : i = pos ∨ i < pos := by omega
       apply (Or.elim this) <;> clear ilt this <;> intro ih
@@ -405,9 +466,7 @@ lemma Matches_symm (A B: Array Nat) (a b n: Nat) : Matches A a B b n <-> Matches
       · rw [ih, <- done_2]
         congr 1; omega
       · revert ih; revert i; exact invariant_8 }
-    { sorry }
     { omega }
-    
 
     
 
@@ -418,6 +477,7 @@ lemma Matches_symm (A B: Array Nat) (a b n: Nat) : Matches A a B b n <-> Matches
 def decreasing_helper (a b c: Nat): Nat :=
   a * 10^b + c
 method kmp_search (W: Array Nat) (S: Array Nat) return (position: Option Nat)
+  require (W.size ≥ 1)
   ensures (match position with | none => ¬∃ val, Matches W 0 S val W.size | some val => Matches W 0 S val W.size)
   do
     let mut j := 0
