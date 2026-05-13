@@ -85,15 +85,8 @@ method kmp_search (W: Array Nat) (S: Array Nat) return (position: FlaggedNat)
     return result
 
 
-@[loomSpec]
-lemma kmp_search_correct (W : Array Nat) (S : Array Nat) :
-      triple (with_name_prefix`require(W.size ≥ 1)) (kmp_search W S)
-        (fun position =>
-          (with_name_prefix`ensures position.flag → Matches W 0 S position.val W.size) ∧
-            with_name_prefix`ensures !position.flag → ¬∃ val, Matches W 0 S val W.size) :=
-    by
-    unfold kmp_search
-    (loom_solve)
+prove_correct kmp_search by
+    loom_solve
     all_goals try rw [decreasing_helper_lemma _ _ _ _ _ (by omega) (by omega)]
     all_goals try
     { constructor
