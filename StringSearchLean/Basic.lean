@@ -124,18 +124,80 @@ lemma kmp_search_correct (W : Array Nat) (S : Array Nat) :
       rw [<- this1, this2]
       congr 1; omega }
     { simp [KMPValid_Array, KMPValid_FlaggedNat] at invariant_6
-      rcases invariant_6 with ⟨ bound, invariant_6⟩
+      rcases invariant_6 with ⟨xeq, invariant_6⟩
       specialize invariant_6 k (by omega)
-      simp [if_pos] at invariant_6
-      sorry }
+      simp [if_pos, KMPValid_Nat] at invariant_6
+      rcases invariant_6 with ⟨xlt, xmatch, xunmatch, greater⟩
+      intros offset offsetlt
+      rcases ((by omega): offset < j - k ∨  j-k=offset ∨  j-k < offset ) with offsetH | offseteq | offsetgt
+      · exact invariant_8 offset offsetH
+      · intro offset_match
+        simp [Matches, <- offseteq ] at offset_match
+        apply if_neg
+        rw [offset_match.2 k a_1]
+        congr 1; omega
+      · intro offset_match
+        simp [Matches] at offset_match
+        apply if_neg
+        have eq1: W[j - offset]! = S[j]! :=
+          by
+            rw [offset_match.2 (j - offset) (by omega)]
+            congr 1; omega
+        specialize greater (j - offset) (by omega) (by omega)
+        have match_lemma : Matches W (k - (j - offset)) W 0 (j - offset) :=
+          by
+            simp [Matches]; constructor; omega; constructor; omega
+            intros i ijH
+            simp [Matches] at invariant_7
+            have this1 := invariant_7.2.2 (k - (j - offset) + i) (by omega)
+            have this2 := offset_match.2 i (by omega)
+            rw [this1, this2]
+            congr 1; omega
+        specialize greater match_lemma
+        have eq2: W[k]! = W[j - offset]! := 
+          by
+            simp [Matches] at greater
+            rw [<- greater.2.2 (j - offset) (by omega)]
+            congr 1; omega
+        rw [eq2, eq1] }
     { simp [KMPValid_Array, KMPValid_FlaggedNat] at invariant_6
       rcases invariant_6 with ⟨ bound, invariant_6⟩
       specialize invariant_6 k (by omega)
       simp [if_neg_1] at invariant_6
-      sorry }
-
-    
-    all_goals (sorry)
+      intros offset offsetlt
+      rcases ((by omega): offset < j - k ∨  j-k=offset ∨  j-k < offset ) with offsetH | offseteq | offsetgt
+      · exact invariant_8 offset offsetH
+      · intro offset_match
+        simp [Matches, <- offseteq ] at offset_match
+        apply if_neg
+        rw [offset_match.2 k a_1]
+        congr 1; omega
+      · intro offset_match
+        simp [Matches] at offset_match
+        apply if_neg
+        have eq1: W[j - offset]! = S[j]! :=
+          by
+            rw [offset_match.2 (j - offset) (by omega)]
+            congr 1; omega
+        have greater := no_match_nonext_of_no_KMPValid
+        simp at greater 
+        specialize greater W k invariant_6 (j - offset) (by omega)
+        have match_lemma : Matches W (k - (j - offset)) W 0 (j - offset) :=
+          by
+            simp [Matches]; constructor; omega; constructor; omega
+            intros i ijH
+            simp [Matches] at invariant_7
+            have this1 := invariant_7.2.2 (k - (j - offset) + i) (by omega)
+            have this2 := offset_match.2 i (by omega)
+            rw [this1, this2]
+            congr 1; omega
+        specialize greater match_lemma
+        have eq2: W[k]! = W[j - offset]! := 
+          by
+            simp [Matches] at greater
+            rw [<- greater.2.2 (j - offset) (by omega)]
+            congr 1; omega
+        rw [eq2, eq1] }
     
     
 -- -- /--
