@@ -205,6 +205,6 @@ def decreasing_helper (a b c: Nat): Nat :=
   
 lemma decreasing_helper_lemma (a1 a2 b1 b2 W: Nat) (h1: b1 < W)  (h2:b2 < W)  : decreasing_helper a1 W b1 < decreasing_helper a2 W b2 ↔ (a1 ≠ a2 -> a1 < a2) ∧ (a1 = a2 -> b1 < b2):= ...
 ```
-This function is used for the termination condition of `kmp_search`, it comes with a lemma stating that if the 2nd argument is kept fixed and is always greater than the 3rd argument, then the ordering on the result of the function follows depending on the arguments is equivalent to the lexicographic ordering on the 1st and 3rd arguments.
+This function is used for the termination condition of `kmp_search`, it comes with a lemma stating that if the 2nd argument is kept fixed and is always greater than the 3rd argument, then the ordering on the result of the function follows depending on the arguments is equivalent to the lexicographic ordering on the 1st and 3rd arguments. From what I could try, Velvet does not support orderings other than the simple one on natural numbers for describing termination conditions, so this function was used to get around that restriction.
 
 
