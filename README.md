@@ -124,7 +124,7 @@ method kmp_search (W: Array Nat) (S: Array Nat) return (position: FlaggedNat)
     let T ← kmp_table W
     let mut result := {flag:= Bool.false, val := 0}
     while j < S.size ∧ k < W.size 
-      invariant 0 ≤ j  
+      invariant 0 ≤ j
       invariant j ≤ S.size
       invariant 0 ≤ k 
       invariant k ≤ W.size
@@ -205,6 +205,24 @@ def decreasing_helper (a b c: Nat): Nat :=
   
 lemma decreasing_helper_lemma (a1 a2 b1 b2 W: Nat) (h1: b1 < W)  (h2:b2 < W)  : decreasing_helper a1 W b1 < decreasing_helper a2 W b2 ↔ (a1 ≠ a2 -> a1 < a2) ∧ (a1 = a2 -> b1 < b2):= ...
 ```
-This function is used for the termination condition of `kmp_search`, it comes with a lemma stating that if the 2nd argument is kept fixed and is always greater than the 3rd argument, then the ordering on the result of the function follows depending on the arguments is equivalent to the lexicographic ordering on the 1st and 3rd arguments. From what I could try, Velvet does not support orderings other than the simple one on natural numbers for describing termination conditions, so this function was used to get around that restriction.
+This function is used for the termination condition of the while loop `kmp_search`, it comes with a lemma stating that if the 2nd argument is kept fixed and is always greater than the 3rd argument, then the ordering on the result of the function follows depending on the arguments is equivalent to the lexicographic ordering on the 1st and 3rd arguments. From what I could try, Velvet does not support orderings other than the simple one on natural numbers for describing termination conditions, so this function was used to get around that restriction.
+
+
+## Properties Proven
+Both implementations have the same precondition, in that they require the search string `W` to be non-empty.
+- `kmp_table`- It is proven that `KMPValid_Array W T` where `T: Array FlaggedNat` is the resultant table built by the algorithm, where `KMPValid_Array` is described above.
+- `kmp_search` - Two postconditions are proven. `!position.flag -> ¬∃ val, Matches W 0 S val W.size` and `position.flag ->  Matches W 0 S position.val W.size`. This means that if the flag in the result is set to true, then the returned index is indeed correct. Otherwise, the search text is not present in the string. Thus the correctness of the search algorithm is proven.
+
+
+# AI Usage Disclaimer
+
+I used [Aristotle](https://aristotle.harmonic.fun/) quite a bit in the completion of this project. In particular, it wrote many of the lemmas in `StringSearch/Table.lean`. Once the initial bugs were fixed (see below) and the implemenation was done, the development cycle consisted of me working on the project during my waking hours, then sending it off to Aristotle to make further progress while I slept.
+- The AI made mistakes in invariant specification.
+- Sometimes the AI would add unnecessary lemmas or unnecessary hypotheses in lemmas whose proofs could be simplified.
+- Due to the long elaboration time involved in `loom_solve` it would fail at completing proofs by itself as iteration would take too long.
+- Overall, progress was still sped up by quite a bit, and the lemmas were critical to the completion of the proof (while also guiding me towards understanding what the final proof would look like).
+
+# Issues encountered and potential improvements to Velvet
+
 
 
