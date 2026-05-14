@@ -223,6 +223,39 @@ I used [Aristotle](https://aristotle.harmonic.fun/) quite a bit in the completio
 - Overall, progress was still sped up by quite a bit, and the lemmas were critical to the completion of the proof (while also guiding me towards understanding what the final proof would look like).
 
 # Issues encountered and potential improvements to Velvet
+Here are some of the issues I faced:
+- Errors caused by usage of Option Types: In the first few commits, it can be seen that I used option types to define the algorithm instead of `FlaggedNat`. However, this caused errors when trying to use `loom_solve`, which complained about an error in some unnamed invariant.
 
+```lean
+method kmp_table (W: Array Nat) return (T: Array (Option Nat))
+  do
+    let mut result := Array.replicate W.size Option.none
+    let mut pos := 1
+    let mut cnd := 0
+    while pos < W.size do
+      if W[pos]! = W[cnd]! then
+        result := result.set! pos (result[cnd]!)
+      else
+        result := result.set! pos (Option.some cnd)
+        let mut cnd' := Option.some cnd
+        while cnd' ≠ Option.none && W[pos]! ≠ W[cnd]! do
+          match cnd' with
+          | none => cnd' := cnd'
+          | some val =>
+            cnd' := result[val]!
+            match cnd' with
+            | none => cnd' := cnd'
+            | some val' => cnd := val'
+        pos := pos + 1
+        match cnd' with
+        | none => cnd := 0
+        | some val => cnd := val + 1
+    return result
+```
+- Weird panic error caused by maxHeartbeats not being set to a high value: Described in this [issue](https://github.com/verse-lab/loom/issues/34) I created. It is not apparent what the cause of the error is, and potentially at the very least a better error message could be used.
+
+- Error in trying to use non-Nat values in `decreasing` clause: Despite LEAN supporting different sorts of termination conditions, Velvet does not seem to do so (from what I could try). Either this could be extended as a feature or the documentation could be updated to reflect it.
+
+- Long elaboration times: This is more of a nitpick but I'm putting this here just to acknowledge that I did find the elaboration times quite large (at times upto 15 minutes on my machine), which caused issues as it discouraged me from rewriting previously defined lemmas or introducing new ones. I imagine this isn't easy to fix at all however, and is probably already a goal the team is pursuing.
 
 
