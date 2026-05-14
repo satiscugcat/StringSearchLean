@@ -61,9 +61,11 @@ algorithm kmp_search:
                 let k ← k + 1
 ```
 
-# Velvet Implementation
+# Formalisation within LEAN4 using Velvet
 
-The corresponding Velvet implementation are as follows:
+This section describes the details of the Velvet implementation, along with elaboration the properties proven about it.
+
+## Implementation Code
 
 in `StringSearchLean/Table.lean`
 ```lean 
@@ -132,11 +134,7 @@ method kmp_search (W: Array Nat) (S: Array Nat) return (position: FlaggedNat)
       invariant ∀ offset, offset < j - k → ¬Matches W 0 S offset W.size
       invariant result.flag -> Matches W 0 S result.val W.size
       invariant !result.flag -> k < W.size
-      -- done_with ((!result.flag -> j = S.size ∧ k < W.size) ∧ (result.flag -> Matches W 0 S result.val W.size) )
       decreasing decreasing_helper (S.size - j) (W.size + 1) k 
-      -- Above line is awkward, ideally I would like to specify
-      -- a lexicographic ordering and say, but using the tuple
-      -- "decreasing (S.size - j, k)", cause a weird type issue.
       do
       if W[k]! = S[j]! then
         j := j + 1
@@ -151,3 +149,62 @@ method kmp_search (W: Array Nat) (S: Array Nat) return (position: FlaggedNat)
           j := j + 1
     return result
 ```
+
+## Pre-requisite Definitions used for Specification
+
+```lean
+structure FlaggedNat where
+  flag: Bool
+  val: Nat
+deriving Inhabited, Repr
+```
+The flag in the FlaggedNat structure is used to signal whether a number is "valid", as opposed to the `-1` that is used in the original description of the algorithm. If the flag is false, the number is invalid. This structure is used in a manner similar to how an `Option Nat` type would be used. (And indeed, `Option Nat` was used for the initial attempt at specification, but was later discarded. More on this at the end of the README.)
+
+```lean 
+def Matches (A: Array Nat) (a: Nat) (B: Array Nat) (b: Nat) (n: Nat)
+  :=
+    n + a ≤ A.size ∧ n + b ≤ B.size ∧ ∀ i < n, A[a + i]! = B[b + i]!
+```
+
+Basic definition for specifying that the length `n` string at index `a` of `A` and index `b` of `B` are the same.
+
+```lean
+def KMPValid_Nat (W: Array Nat) (i: Nat) (t_i: Nat) : Prop:=
+
+  t_i < i ∧ Matches W (i - t_i) W 0 t_i 
+  ∧ ¬ Matches W (i - t_i) W 0 (t_i + 1)
+  ∧ (∀ j, t_i < j ∧ j < i -> ¬ (Matches W (i - j) W 0 j 
+    ∧ ¬ Matches W (i - j) W 0 (j + 1)
+    ))
+```
+
+For a given index, we say `t_i` is a `KMPValid_Nat` if it is the _largest_ number such that the suffix of length `t_i` of the subarray `W[0..i-1]`(both indices inclusive) is a prefix, and such that the suffix of length `t_i+1` of the subarray `W[0..i]` is not a prefix.
+
+```lean
+def KMPValid_FlaggedNat (W: Array Nat) (i: Nat) (t_i: FlaggedNat) : Prop:= 
+  if t_i.flag then KMPValid_Nat W i t_i.val else ¬ ∃ k, KMPValid_Nat W i k
+```
+If the flag of `t_i: FlaggedNat` is true, then the underlying `t_i.val` must be `KMPValid_Nat` at index `i` w.r.t. `W`. Otherwise, there must exist no natural number for which is `KMPValid_Nat` at index `i` w.r.t. `W`. 
+
+```lean
+def KMPValid_Array (W: Array Nat) (T: Array FlaggedNat) : Prop :=
+  W.size = T.size ∧ 
+  ∀ i < T.size, KMPValid_FlaggedNat W i T[i]!
+```
+This is the specification of the output of `kmp_table`. Which requires that every corresponding `FlaggedNat` in `T` must be valid as defined above.
+
+```lean
+def flagged_to_nat_for_decreasing (o: FlaggedNat) :=
+  if !o.flag then 0 else o.val + 1
+```
+This is a function used for the temrination condition of the inner while loop of `kmp_table`.
+
+```lean
+def decreasing_helper (a b c: Nat): Nat :=
+  a * b + c
+  
+lemma decreasing_helper_lemma (a1 a2 b1 b2 W: Nat) (h1: b1 < W)  (h2:b2 < W)  : decreasing_helper a1 W b1 < decreasing_helper a2 W b2 ↔ (a1 ≠ a2 -> a1 < a2) ∧ (a1 = a2 -> b1 < b2):= ...
+```
+This function is used for the termination condition of `kmp_search`, it comes with a lemma stating that if the 2nd argument is kept fixed and is always greater than the 3rd argument, then the ordering on the result of the function follows depending on the arguments is equivalent to the lexicographic ordering on the 1st and 3rd arguments.
+
+
